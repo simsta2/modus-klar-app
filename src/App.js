@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { registerUser, saveVideoRecord, loadUserProgress } from './api';
 
 // Einfache Icon-Komponenten mit Emojis
 const Icon = ({ children, className, onClick }) => (
@@ -33,6 +34,9 @@ const ModusKlarApp = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [currentVideoType, setCurrentVideoType] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [userId, setUserId] = useState(null);
   const [userData, setUserData] = useState({ 
     name: '', 
     email: '', 
@@ -43,12 +47,48 @@ const ModusKlarApp = () => {
     notificationsEnabled: false
   });
   const [timeWindow, setTimeWindow] = useState({ morning: false, evening: false });
-  const [recordedVideos, setRecordedVideos] = useState([]);
+  const [recordedBlob, setRecordedBlob] = useState(null);
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const recordingIntervalRef = useRef(null);
+
+  // Beim Start: Check ob User bereits eingeloggt
+  useEffect(() => {
+    const savedUserId = localStorage.getItem('userId');
+    const savedUserName = localStorage.getItem('userName');
+    
+    if (savedUserId && savedUserName) {
+      setUserId(savedUserId);
+      setUserData(prev => ({ ...prev, name: savedUserName }));
+      setCurrentScreen('dashboard');
+      
+      // Lade Fortschritt
+      loadProgress(savedUserId);
+    }
+  }, []);
+
+  // Lade Nutzer-Fortschritt aus Datenbank
+  const loadProgress = async (userId) => {
+    const result = await loadUserProgress(userId);
+    if (result.success && result.progress) {
+      // Berechne aktuellen Tag basierend auf Fortschritt
+      const completedDays = result.progress.filter(
+        p => p.morning_status === 'verified' && p.evening_status === 'verified'
+      ).length;
+      setCurrentDay(completedDays + 1);
+      
+      // Setze heutigen Status
+      const today = result.progress.find(p => p.day_number === completedDays + 1);
+      if (today) {
+        setTodayVideos({
+          morning: today.morning_status,
+          evening: today.evening_status
+        });
+      }
+    }
+  };
 
   // Styles
   const styles = {
@@ -105,6 +145,23 @@ const ModusKlarApp = () => {
     setMonthProgress(progress);
   }, [currentDay, todayVideos]);
 
+  // Registrierung mit echter Datenbank
+  const handleRegistration = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+    
+    const result = await registerUser(userData);
+    
+    if (result.success) {
+      setUserId(result.user.id);
+      setCurrentScreen('dashboard');
+    } else {
+      setErrorMessage('Registrierung fehlgeschlagen: ' + result.error);
+    }
+    
+    setIsLoading(false);
+  };
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -138,32 +195,29 @@ const ModusKlarApp = () => {
       chunks.push(e.data);
     };
     
-    mediaRecorderRef.current.onstop = () => {
+    mediaRecorderRef.current.onstop = async () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
-      const videoData = {
-        id: Date.now(),
-        blob: blob,
-        type: currentVideoType,
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-        day: currentDay
-      };
+      setRecordedBlob(blob);
       
-      setRecordedVideos(prev => [...prev, videoData]);
-      
-      setTimeout(() => {
-        setTodayVideos(prev => ({
-          ...prev,
-          [currentVideoType]: 'pending'
-        }));
+      // Speichere Video-Eintrag in Datenbank
+      if (userId) {
+        const result = await saveVideoRecord(userId, currentVideoType, currentDay);
         
-        setTimeout(() => {
+        if (result.success) {
           setTodayVideos(prev => ({
             ...prev,
-            [currentVideoType]: 'verified'
+            [currentVideoType]: 'pending'
           }));
-        }, 5000);
-      }, 500);
+          
+          // Simuliere Verifikation nach 5 Sekunden
+          setTimeout(() => {
+            setTodayVideos(prev => ({
+              ...prev,
+              [currentVideoType]: 'verified'
+            }));
+          }, 5000);
+        }
+      }
     };
     
     mediaRecorderRef.current.start();
@@ -244,6 +298,23 @@ const ModusKlarApp = () => {
           >
             Jetzt starten
           </button>
+          
+          {localStorage.getItem('userId') && (
+            <button
+              onClick={() => {
+                setUserId(localStorage.getItem('userId'));
+                setUserData(prev => ({ ...prev, name: localStorage.getItem('userName') }));
+                setCurrentScreen('dashboard');
+              }}
+              style={{ 
+                ...styles.button, 
+                marginTop: '1rem',
+                background: '#6B7280'
+              }}
+            >
+              Als {localStorage.getItem('userName')} fortfahren
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -313,264 +384,8 @@ const ModusKlarApp = () => {
         <div style={styles.card}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Registrierung</h2>
           
-          <div>
-            <input
-              type="text"
-              placeholder="Vollständiger Name (wie auf Ausweis)"
-              style={styles.input}
-              value={userData.name}
-              onChange={(e) => setUserData({...userData, name: e.target.value})}
-            />
-            <input
-              type="email"
-              placeholder="E-Mail-Adresse"
-              style={styles.input}
-              value={userData.email}
-              onChange={(e) => setUserData({...userData, email: e.target.value})}
-            />
-            <input
-              type="text"
-              placeholder="Krankenkassen-Mitgliedsnummer"
-              style={styles.input}
-              value={userData.idNumber}
-              onChange={(e) => setUserData({...userData, idNumber: e.target.value})}
-            />
-            
-            <div style={{ backgroundColor: '#F3F4F6', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-              <button style={{ 
-                ...styles.button, 
-                background: 'white', 
-                color: '#374151', 
-                border: '1px solid #D1D5DB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <span>Ausweis verifizieren</span>
-                <CreditCard />
-              </button>
-              <p style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '0.5rem' }}>
-                Sie werden zur sicheren Identifikation weitergeleitet
-              </p>
-            </div>
-          </div>
-          
-          <div style={{ backgroundColor: '#DBEAFE', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Teilnahmebedingungen:</h3>
-            <ul style={{ fontSize: '0.875rem', color: '#6B7280', paddingLeft: '1.5rem' }}>
-              <li>28 Tage (4 Wochen) tägliche Messungen</li>
-              <li>2 Videos täglich in den Zeitfenstern</li>
-              <li>Messung innerhalb 1 Stunde nach Benachrichtigung</li>
-              <li>0,0 Promille bei allen Messungen</li>
-              <li>Verpasste/abgelehnte Videos = Neustart</li>
-            </ul>
-          </div>
-          
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'start', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={userData.agreed}
-                onChange={(e) => setUserData({...userData, agreed: e.target.checked})}
-                style={{ marginTop: '0.25rem' }}
-              />
-              <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                Ich akzeptiere die{' '}
-                <button 
-                  onClick={() => setShowTerms(true)} 
-                  style={{ color: '#3B82F6', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  Teilnahmebedingungen
-                </button>{' '}
-                und bestätige, dass meine Krankenkasse die Kostenübernahme genehmigt hat.
-              </span>
-            </label>
-          </div>
-          
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'start', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                checked={userData.notificationsEnabled}
-                onChange={(e) => setUserData({...userData, notificationsEnabled: e.target.checked})}
-                style={{ marginTop: '0.25rem' }}
-              />
-              <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                Ich erlaube Push-Benachrichtigungen für Messzeiten
-              </span>
-            </label>
-          </div>
-          
-          <button
-            onClick={() => {
-              if (userData.agreed && userData.name && userData.email && userData.idNumber && userData.notificationsEnabled) {
-                setUserData({...userData, challengeStartDate: new Date()});
-                setCurrentScreen('dashboard');
-              }
-            }}
-            style={{
-              ...styles.button,
-              ...(userData.agreed && userData.name && userData.email && userData.idNumber && userData.notificationsEnabled
-                ? {}
-                : { background: '#D1D5DB', cursor: 'not-allowed' })
-            }}
-            disabled={!userData.agreed || !userData.name || !userData.email || !userData.idNumber || !userData.notificationsEnabled}
-          >
-            Challenge starten
-          </button>
-        </div>
-        
-        {showTerms && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-            zIndex: 50
-          }}>
-            <div style={{
-              ...styles.card,
-              maxHeight: '80vh',
-              overflowY: 'auto'
-            }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Teilnahmebedingungen</h3>
-              <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                <p style={{ marginBottom: '0.75rem' }}><strong>1. Programmdauer:</strong> 28 aufeinanderfolgende Tage (4 Wochen)</p>
-                <p style={{ marginBottom: '0.75rem' }}><strong>2. Messzeiten:</strong></p>
-                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
-                  <li>Morgens: 8:00 - 12:00 Uhr</li>
-                  <li>Abends: 18:00 - 22:00 Uhr</li>
-                  <li>Video innerhalb 60 Minuten nach Benachrichtigung</li>
-                </ul>
-                <p style={{ marginBottom: '0.75rem' }}><strong>3. Anforderungen:</strong></p>
-                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
-                  <li>Eigenes, geprüftes Alkoholmessgerät</li>
-                  <li>Deutlich sichtbare Messung im Video</li>
-                  <li>Ergebnis: 0,0 Promille</li>
-                </ul>
-                <p style={{ marginBottom: '0.75rem' }}><strong>4. Ablehnung erfolgt bei:</strong></p>
-                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
-                  <li>Promille über 0,0</li>
-                  <li>Undeutlicher Aufnahme</li>
-                  <li>Manipulation</li>
-                  <li>Verpasster Messung</li>
-                </ul>
-                <p style={{ marginBottom: '0.75rem' }}><strong>5. Neustart:</strong> Bei Ablehnung oder verpasster Messung startet das Programm von Tag 1</p>
-                <p style={{ marginBottom: '0.75rem' }}><strong>6. Datenschutz:</strong> Videos werden nur zur Verifikation verwendet und nach Programmende gelöscht</p>
-                <p style={{ marginBottom: '0.75rem' }}><strong>7. Prämie:</strong> Nach erfolgreicher Teilnahme gemäß Vereinbarung mit Ihrer Krankenkasse</p>
-              </div>
-              <button
-                onClick={() => setShowTerms(false)}
-                style={{
-                  ...styles.button,
-                  background: '#1F2937',
-                  marginTop: '1.5rem'
-                }}
-              >
-                Schließen
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderDashboard = () => (
-    <div style={{ ...styles.minHeight, ...styles.gradient }}>
-      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
-        <div style={{ ...styles.container, padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Modus-Klar</h1>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>Tag {currentDay} von 28</p>
-              <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{userData.name}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div style={styles.container}>
-        {(timeWindow.morning || timeWindow.evening) && (
-          <div style={{
-            backgroundColor: '#FEF3C7',
-            border: '1px solid #FCD34D',
-            borderRadius: '0.5rem',
-            padding: '1rem',
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
-            <Bell />
-            <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400E' }}>
-              Messzeit aktiv! Sie haben noch 60 Minuten
-            </p>
-          </div>
-        )}
-        
-        <div style={{ ...styles.card, marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Heutige Messungen</h2>
-          
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '1rem',
-              backgroundColor: '#F9FAFB',
-              borderRadius: '0.5rem',
-              marginBottom: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Clock />
-                <div>
-                  <p style={{ fontWeight: '500' }}>Morgen-Messung</p>
-                  <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>8:00 - 12:00 Uhr</p>
-                </div>
-              </div>
-              {todayVideos.morning === 'verified' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CheckCircle />
-                  <span style={{ fontSize: '0.75rem', color: '#059669' }}>Verifiziert</span>
-                </div>
-              ) : todayVideos.morning === 'pending' ? (
-                <div style={{ fontSize: '0.75rem', color: '#F59E0B' }}>Wird geprüft...</div>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (timeWindow.morning) {
-                      setCurrentVideoType('morning');
-                      setCurrentScreen('recording');
-                    }
-                  }}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    border: 'none',
-                    cursor: timeWindow.morning ? 'pointer' : 'not-allowed',
-                    backgroundColor: timeWindow.morning ? '#3B82F6' : '#D1D5DB',
-                    color: timeWindow.morning ? 'white' : '#9CA3AF'
-                  }}
-                  disabled={!timeWindow.morning}
-                >
-                  {timeWindow.morning ? 'Jetzt messen' : 'Zeitfenster geschlossen'}
-                </button>
-              )}
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '1rem',
+          {errorMessage && (
+            <div style={{ 
               backgroundColor: '#F9FAFB',
               borderRadius: '0.5rem'
             }}>
@@ -678,6 +493,18 @@ const ModusKlarApp = () => {
               <Shield />
             </div>
           </div>
+        </div>
+        
+        <div style={{ 
+          marginTop: '1rem', 
+          padding: '1rem', 
+          backgroundColor: 'rgba(255,255,255,0.8)', 
+          borderRadius: '0.5rem',
+          fontSize: '0.75rem',
+          color: '#6B7280',
+          textAlign: 'center'
+        }}>
+          User ID: {userId}
         </div>
       </div>
       
@@ -856,4 +683,284 @@ const ModusKlarApp = () => {
   );
 };
 
-export default ModusKlarApp;
+export default ModusKlarApp; '#FEE2E2', 
+              color: '#DC2626', 
+              padding: '0.75rem', 
+              borderRadius: '0.5rem', 
+              marginBottom: '1rem',
+              fontSize: '0.875rem'
+            }}>
+              {errorMessage}
+            </div>
+          )}
+          
+          <div>
+            <input
+              type="text"
+              placeholder="Vollständiger Name (wie auf Ausweis)"
+              style={styles.input}
+              value={userData.name}
+              onChange={(e) => setUserData({...userData, name: e.target.value})}
+            />
+            <input
+              type="email"
+              placeholder="E-Mail-Adresse"
+              style={styles.input}
+              value={userData.email}
+              onChange={(e) => setUserData({...userData, email: e.target.value})}
+            />
+            <input
+              type="text"
+              placeholder="Krankenkassen-Mitgliedsnummer"
+              style={styles.input}
+              value={userData.idNumber}
+              onChange={(e) => setUserData({...userData, idNumber: e.target.value})}
+            />
+            
+            <div style={{ backgroundColor: '#F3F4F6', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+              <button style={{ 
+                ...styles.button, 
+                background: 'white', 
+                color: '#374151', 
+                border: '1px solid #D1D5DB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span>Ausweis verifizieren</span>
+                <CreditCard />
+              </button>
+              <p style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '0.5rem' }}>
+                Sie werden zur sicheren Identifikation weitergeleitet
+              </p>
+            </div>
+          </div>
+          
+          <div style={{ backgroundColor: '#DBEAFE', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Teilnahmebedingungen:</h3>
+            <ul style={{ fontSize: '0.875rem', color: '#6B7280', paddingLeft: '1.5rem' }}>
+              <li>28 Tage (4 Wochen) tägliche Messungen</li>
+              <li>2 Videos täglich in den Zeitfenstern</li>
+              <li>Messung innerhalb 1 Stunde nach Benachrichtigung</li>
+              <li>0,0 Promille bei allen Messungen</li>
+              <li>Verpasste/abgelehnte Videos = Neustart</li>
+            </ul>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'start', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                checked={userData.agreed}
+                onChange={(e) => setUserData({...userData, agreed: e.target.checked})}
+                style={{ marginTop: '0.25rem' }}
+              />
+              <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                Ich akzeptiere die{' '}
+                <button 
+                  onClick={() => setShowTerms(true)} 
+                  style={{ color: '#3B82F6', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Teilnahmebedingungen
+                </button>{' '}
+                und bestätige, dass meine Krankenkasse die Kostenübernahme genehmigt hat.
+              </span>
+            </label>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'start', gap: '0.5rem' }}>
+              <input
+                type="checkbox"
+                checked={userData.notificationsEnabled}
+                onChange={(e) => setUserData({...userData, notificationsEnabled: e.target.checked})}
+                style={{ marginTop: '0.25rem' }}
+              />
+              <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                Ich erlaube Push-Benachrichtigungen für Messzeiten
+              </span>
+            </label>
+          </div>
+          
+          <button
+            onClick={handleRegistration}
+            style={{
+              ...styles.button,
+              ...(userData.agreed && userData.name && userData.email && userData.idNumber && userData.notificationsEnabled && !isLoading
+                ? {}
+                : { background: '#D1D5DB', cursor: 'not-allowed' })
+            }}
+            disabled={!userData.agreed || !userData.name || !userData.email || !userData.idNumber || !userData.notificationsEnabled || isLoading}
+          >
+            {isLoading ? 'Wird registriert...' : 'Challenge starten'}
+          </button>
+        </div>
+        
+        {showTerms && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+            zIndex: 50
+          }}>
+            <div style={{
+              ...styles.card,
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Teilnahmebedingungen</h3>
+              <div style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                <p style={{ marginBottom: '0.75rem' }}><strong>1. Programmdauer:</strong> 28 aufeinanderfolgende Tage (4 Wochen)</p>
+                <p style={{ marginBottom: '0.75rem' }}><strong>2. Messzeiten:</strong></p>
+                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
+                  <li>Morgens: 8:00 - 12:00 Uhr</li>
+                  <li>Abends: 18:00 - 22:00 Uhr</li>
+                  <li>Video innerhalb 60 Minuten nach Benachrichtigung</li>
+                </ul>
+                <p style={{ marginBottom: '0.75rem' }}><strong>3. Anforderungen:</strong></p>
+                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
+                  <li>Eigenes, geprüftes Alkoholmessgerät</li>
+                  <li>Deutlich sichtbare Messung im Video</li>
+                  <li>Ergebnis: 0,0 Promille</li>
+                </ul>
+                <p style={{ marginBottom: '0.75rem' }}><strong>4. Ablehnung erfolgt bei:</strong></p>
+                <ul style={{ paddingLeft: '1.5rem', marginBottom: '0.75rem' }}>
+                  <li>Promille über 0,0</li>
+                  <li>Undeutlicher Aufnahme</li>
+                  <li>Manipulation</li>
+                  <li>Verpasster Messung</li>
+                </ul>
+                <p style={{ marginBottom: '0.75rem' }}><strong>5. Neustart:</strong> Bei Ablehnung oder verpasster Messung startet das Programm von Tag 1</p>
+                <p style={{ marginBottom: '0.75rem' }}><strong>6. Datenschutz:</strong> Videos werden nur zur Verifikation verwendet und nach Programmende gelöscht</p>
+                <p style={{ marginBottom: '0.75rem' }}><strong>7. Prämie:</strong> Nach erfolgreicher Teilnahme gemäß Vereinbarung mit Ihrer Krankenkasse</p>
+              </div>
+              <button
+                onClick={() => setShowTerms(false)}
+                style={{
+                  ...styles.button,
+                  background: '#1F2937',
+                  marginTop: '1.5rem'
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDashboard = () => (
+    <div style={{ ...styles.minHeight, ...styles.gradient }}>
+      <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+        <div style={{ ...styles.container, padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Modus-Klar</h1>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>Tag {currentDay} von 28</p>
+              <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{userData.name}</p>
+              <button
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#DC2626', 
+                  background: 'none', 
+                  border: 'none',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Abmelden
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style={styles.container}>
+        {(timeWindow.morning || timeWindow.evening) && (
+          <div style={{
+            backgroundColor: '#FEF3C7',
+            border: '1px solid #FCD34D',
+            borderRadius: '0.5rem',
+            padding: '1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}>
+            <Bell />
+            <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400E' }}>
+              Messzeit aktiv! Sie haben noch 60 Minuten
+            </p>
+          </div>
+        )}
+        
+        <div style={{ ...styles.card, marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Heutige Messungen</h2>
+          
+          <div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '1rem',
+              backgroundColor: '#F9FAFB',
+              borderRadius: '0.5rem',
+              marginBottom: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Clock />
+                <div>
+                  <p style={{ fontWeight: '500' }}>Morgen-Messung</p>
+                  <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>8:00 - 12:00 Uhr</p>
+                </div>
+              </div>
+              {todayVideos.morning === 'verified' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckCircle />
+                  <span style={{ fontSize: '0.75rem', color: '#059669' }}>Verifiziert</span>
+                </div>
+              ) : todayVideos.morning === 'pending' ? (
+                <div style={{ fontSize: '0.75rem', color: '#F59E0B' }}>Wird geprüft...</div>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (timeWindow.morning) {
+                      setCurrentVideoType('morning');
+                      setCurrentScreen('recording');
+                    }
+                  }}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    border: 'none',
+                    cursor: timeWindow.morning ? 'pointer' : 'not-allowed',
+                    backgroundColor: timeWindow.morning ? '#3B82F6' : '#D1D5DB',
+                    color: timeWindow.morning ? 'white' : '#9CA3AF'
+                  }}
+                  disabled={!timeWindow.morning}
+                >
+                  {timeWindow.morning ? 'Jetzt messen' : 'Zeitfenster geschlossen'}
+                </button>
+              )}
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '1rem',
+              backgroundColor:
