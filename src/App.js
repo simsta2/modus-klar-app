@@ -331,67 +331,6 @@ const ModusKlarApp = () => {
               <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
                 <AlertCircle />
                 <div>
-                  <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Alkoholmessgerät erforderlich</p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                    Sie benötigen ein eigenes, geprüftes Alkoholmessgerät. 
-                    Empfohlene Modelle finden Sie in der App.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ backgroundColor: '#DBEAFE', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
-                <CreditCard />
-                <div>
-                  <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Ausweisverifizierung</p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                    Zur Teilnahme ist eine einmalige Identitätsprüfung per Personalausweis erforderlich.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ backgroundColor: '#D1FAE5', padding: '1rem', borderRadius: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
-                <Bell />
-                <div>
-                  <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Tägliche Benachrichtigungen</p>
-                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
-                    Erinnerungen für Ihre Messzeiten:<br/>
-                    Morgens: 8-12 Uhr<br/>
-                    Abends: 18-22 Uhr
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <button
-            onClick={() => setCurrentScreen('registration')}
-            style={styles.button}
-          >
-            Verstanden, weiter zur Registrierung
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderRegistrationScreen = () => (
-    <div style={{ ...styles.minHeight, ...styles.gradient, padding: '1rem' }}>
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Registrierung</h2>
-          
-          {errorMessage && (
-            <div style={{ 
-              backgroundColor: '#F9FAFB',
-              borderRadius: '0.5rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Clock />
-                <div>
                   <p style={{ fontWeight: '500' }}>Abend-Messung</p>
                   <p style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>18:00 - 22:00 Uhr</p>
                 </div>
@@ -518,16 +457,16 @@ const ModusKlarApp = () => {
       }}>
         <div style={{ ...styles.container, padding: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#3B82F6', fontSize: '1.5rem' }}>
+            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#3B82F6', fontSize: '1.5rem', cursor: 'pointer' }}>
               <Home />
             </button>
-            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem' }}>
+            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem', cursor: 'pointer' }}>
               <Calendar />
             </button>
-            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem' }}>
+            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem', cursor: 'pointer' }}>
               <FileText />
             </button>
-            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem' }}>
+            <button style={{ padding: '0.75rem', background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.5rem', cursor: 'pointer' }}>
               <HelpCircle />
             </button>
           </div>
@@ -683,7 +622,62 @@ const ModusKlarApp = () => {
   );
 };
 
-export default ModusKlarApp; '#FEE2E2', 
+export default ModusKlarApp;600', marginBottom: '0.25rem' }}>Alkoholmessgerät erforderlich</p>
+                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                    Sie benötigen ein eigenes, geprüftes Alkoholmessgerät. 
+                    Empfohlene Modelle finden Sie in der App.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ backgroundColor: '#DBEAFE', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                <CreditCard />
+                <div>
+                  <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Ausweisverifizierung</p>
+                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                    Zur Teilnahme ist eine einmalige Identitätsprüfung per Personalausweis erforderlich.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ backgroundColor: '#D1FAE5', padding: '1rem', borderRadius: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                <Bell />
+                <div>
+                  <p style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Tägliche Benachrichtigungen</p>
+                  <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
+                    Erinnerungen für Ihre Messzeiten:<br/>
+                    Morgens: 8-12 Uhr<br/>
+                    Abends: 18-22 Uhr
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setCurrentScreen('registration')}
+            style={styles.button}
+          >
+            Verstanden, weiter zur Registrierung
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRegistrationScreen = () => (
+    <div style={{ ...styles.minHeight, ...styles.gradient, padding: '1rem' }}>
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Registrierung</h2>
+          
+          {errorMessage && (
+            <div style={{ 
+              backgroundColor: '#FEE2E2', 
               color: '#DC2626', 
               padding: '0.75rem', 
               borderRadius: '0.5rem', 
@@ -758,7 +752,7 @@ export default ModusKlarApp; '#FEE2E2',
               <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>
                 Ich akzeptiere die{' '}
                 <button 
-                  onClick={() => setShowTerms(true)} 
+                  onClick={(e) => { e.preventDefault(); setShowTerms(true); }} 
                   style={{ color: '#3B82F6', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
                 >
                   Teilnahmebedingungen
@@ -963,4 +957,10 @@ export default ModusKlarApp; '#FEE2E2',
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '1rem',
-              backgroundColor:
+              backgroundColor: '#F9FAFB',
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Clock />
+                <div>
+                  <p style={{ fontWeight: '
