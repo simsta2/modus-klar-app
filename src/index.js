@@ -1,6 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import TestSupabase from './TestSupabase';
+import './index.css';
+import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<TestSupabase />);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
