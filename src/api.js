@@ -98,3 +98,123 @@ export async function loadUserProgress(userId) {
     return { success: false, error: error.message };
   }
 }
+// Admin Login Check
+export async function checkAdminAccess(email) {
+  try {
+    const { data, error } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) throw error;
+    return { success: true, isAdmin: true };
+  } catch (error) {
+    return { success: false, isAdmin: false };
+  }
+}
+
+// Alle Nutzer laden
+export async function getAllUsers() {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, users: data };
+  } catch (error) {
+    console.error('Fehler beim Laden der Nutzer:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Alle Videos laden
+export async function getAllVideos() {
+  try {
+    const { data, error } = await supabase
+      .from('videos')
+      .select(`
+        *,
+        users (
+          name,
+          email
+        )
+      `)
+      .order('recorded_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, videos: data };
+  } catch (error) {
+    console.error('Fehler beim Laden der Videos:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Video-Status aktualisieren
+export async function updateVideoStatus(videoId, status, rejectionReason = null) {
+  try {
+    const updateData = {
+      status: status,
+      verified_at: new Date().toISOString(),
+      verified_by: localStorage.getItem('adminEmail')
+    };
+    
+    if (rejectionReason) {
+      updateData.rejection_reason = rejectionReason;
+    }
+
+    const { data, error } = await supabase
+      .from('videos')
+      .update(updateData)
+      .eq('id', videoId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Update daily progress
+    await supabase
+      .from('daily_progress')
+      .update({
+        [`${data.video_type}_status`]: status
+      })
+      .eq('user_id', data.user_id)
+      .eq('day_number', data.day_number);
+
+    return { success: true, video: data };
+  } catch (error) {
+    console.error('Fehler beim Update:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Nutzer-Statistiken
+export async function getUserStats(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('daily_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .order('day_number', { ascending: true });
+
+    if (error) throw error;
+    
+    const completedDays = data.filter(
+      d => d.morning_status === 'verified' && d.evening_status === 'verified'
+    ).length;
+    
+    return { 
+      success: true, 
+      stats: {
+        totalDays: data.length,
+        completedDays: completedDays,
+        successRate: (completedDays / data.length * 100).toFixed(1)
+      }
+    };
+  } catch (error) {
+    console.error('Fehler beim Laden der Statistiken:', error);
+    return { success: false, error: error.message };
+  }
+}
