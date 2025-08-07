@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { registerUser, saveVideoRecord, loadUserProgress } from './api';
+import AdminDashboard from './AdminDashboard';
 
+const ModusKlarApp = () => {
+  // Prüfe ob Admin-Route
+  if (window.location.pathname === '/admin') {
+    return <AdminDashboard />;
+  }
+  
+  // ... rest des bisherigen Codes
 // Einfache Icon-Komponenten mit Emojis
 const Icon = ({ children, className, onClick }) => (
   <span className={className} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
