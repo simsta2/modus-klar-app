@@ -218,3 +218,24 @@ export async function getUserStats(userId) {
     return { success: false, error: error.message };
   }
 }
+// Nutzer Login
+export async function loginUser(email) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) throw error;
+    
+    // Speichere User ID im Browser
+    localStorage.setItem('userId', data.id);
+    localStorage.setItem('userName', data.name);
+    
+    return { success: true, user: data };
+  } catch (error) {
+    console.error('Login fehlgeschlagen:', error);
+    return { success: false, error: 'Email nicht gefunden oder falsches Passwort' };
+  }
+}
