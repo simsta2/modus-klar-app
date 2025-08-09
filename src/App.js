@@ -38,6 +38,9 @@ const ModusKlarApp = () => {
   // State Management
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [currentDay, setCurrentDay] = useState(1);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [todayVideos, setTodayVideos] = useState({ morning: null, evening: null });
   const [monthProgress, setMonthProgress] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
