@@ -2,21 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { registerUser, saveVideoRecord, loadUserProgress, loginUser } from './api';
 import AdminDashboard from './AdminDashboard';
 
-// Icons...
-
-const ModusKlarApp = () => {
-  // Prüfe ob Admin-Modus über URL-Parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const isAdminMode = urlParams.get('admin') === 'true';
-  
-  if (isAdminMode) {
-    return <AdminDashboard />;
-  }
-  
-  // ... rest des Codes
-  }
-  
-  // ... rest des bisherigen Codes
 // Einfache Icon-Komponenten mit Emojis
 const Icon = ({ children, className, onClick }) => (
   <span className={className} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
@@ -42,6 +27,14 @@ const CreditCard = (props) => <Icon {...props}>💳</Icon>;
 
 // Haupt-App Komponente
 const ModusKlarApp = () => {
+  // Prüfe ob Admin-Modus über URL-Parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdminMode = urlParams.get('admin') === 'true';
+  
+  if (isAdminMode) {
+    return <AdminDashboard />;
+  }
+  
   // State Management
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [currentDay, setCurrentDay] = useState(1);
