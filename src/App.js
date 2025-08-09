@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { registerUser, saveVideoRecord, loadUserProgress } from './api';
+import { registerUser, saveVideoRecord, loadUserProgress, loginUser } from './api';
 import AdminDashboard from './AdminDashboard';
 
 // Icons...
@@ -367,11 +367,101 @@ const ModusKlarApp = () => {
           >
             Neue Registrierung starten
           </button>
+              <button
+  onClick={() => setCurrentScreen('login')}
+  style={{
+    ...styles.button,
+    marginTop: '1rem',
+    background: '#6B7280'
+  }}
+>
+  Bereits registriert? Anmelden
+</button>
         </div>
       </div>
     </div>
   );
+const renderLoginScreen = () => {
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
+    const handleLogin = async () => {
+      setIsLoading(true);
+      setLoginError('');
+      
+      const result = await loginUser(loginEmail);
+      
+      if (result.success) {
+        setUserId(result.user.id);
+        setUserData(result.user);
+        setCurrentScreen('dashboard');
+        loadProgress(result.user.id);
+      } else {
+        setLoginError(result.error);
+      }
+      
+      setIsLoading(false);
+    };
+
+    return (
+      <div style={{ ...styles.minHeight, ...styles.gradient, padding: '1rem' }}>
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <button 
+              onClick={() => setCurrentScreen('welcome')}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                fontSize: '1.5rem', 
+                cursor: 'pointer',
+                marginBottom: '1rem'
+              }}
+            >
+              ←
+            </button>
+            
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Anmelden</h2>
+            
+            {loginError && (
+              <div style={{ 
+                backgroundColor: '#FEE2E2', 
+                color: '#DC2626', 
+                padding: '0.75rem', 
+                borderRadius: '0.5rem', 
+                marginBottom: '1rem',
+                fontSize: '0.875rem'
+              }}>
+                {loginError}
+              </div>
+            )}
+            
+            <input
+              type="email"
+              placeholder="Ihre Email-Adresse"
+              style={styles.input}
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            
+            <button
+              onClick={handleLogin}
+              style={{
+                ...styles.button,
+                ...(loginEmail && !isLoading
+                  ? {}
+                  : { background: '#D1D5DB', cursor: 'not-allowed' })
+              }}
+              disabled={!loginEmail || isLoading}
+            >
+              {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
   const renderRequirementsScreen = () => (
     <div style={{ ...styles.minHeight, ...styles.gradient, padding: '1rem' }}>
       <div style={styles.container}>
@@ -1058,6 +1148,7 @@ const ModusKlarApp = () => {
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       {currentScreen === 'welcome' && renderWelcomeScreen()}
+      {currentScreen === 'login' && renderLoginScreen()}
       {currentScreen === 'requirements' && renderRequirementsScreen()}
       {currentScreen === 'registration' && renderRegistrationScreen()}
       {currentScreen === 'dashboard' && renderDashboard()}
