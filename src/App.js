@@ -378,9 +378,6 @@ const ModusKlarApp = () => {
     </div>
   );
 const renderLoginScreen = () => {
-    const [loginEmail, setLoginEmail] = useState('');
-    const [loginError, setLoginError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async () => {
       setIsLoading(true);
