@@ -1137,17 +1137,19 @@ const renderLoginScreen = () => {
     );
   };
 
-  // Main Render
-  return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      {currentScreen === 'welcome' && renderWelcomeScreen()} 
-      {currentScreen === 'login' && <div style={{padding: '2rem'}}>Login Screen Test - Wenn du das siehst, ist der Screen da!</div>}
-      {currentScreen === 'requirements' && renderRequirementsScreen()}
-      {currentScreen === 'registration' && renderRegistrationScreen()}
-      {currentScreen === 'dashboard' && renderDashboard()}
-      {currentScreen === 'recording' && renderRecordingScreen()}
-    </div>
-  );
+ // Main Render
+return (
+  <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    {console.log('Current Screen:', currentScreen)}
+    {console.log('renderLoginScreen exists?', typeof renderLoginScreen)}
+    {currentScreen === 'welcome' && renderWelcomeScreen()} 
+    {currentScreen === 'login' && renderLoginScreen()}
+    {currentScreen === 'requirements' && renderRequirementsScreen()}
+    {currentScreen === 'registration' && renderRegistrationScreen()}
+    {currentScreen === 'dashboard' && renderDashboard()}
+    {currentScreen === 'recording' && renderRecordingScreen()}
+  </div>
+);
 };
 
 export default ModusKlarApp;
