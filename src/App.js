@@ -2,10 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { registerUser, saveVideoRecord, loadUserProgress } from './api';
 import AdminDashboard from './AdminDashboard';
 
+// Icons...
+
 const ModusKlarApp = () => {
-  // Prüfe ob Admin-Route
-  if (window.location.pathname === '/admin') {
+  // Prüfe ob Admin-Modus über URL-Parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdminMode = urlParams.get('admin') === 'true';
+  
+  if (isAdminMode) {
     return <AdminDashboard />;
+  }
+  
+  // ... rest des Codes
   }
   
   // ... rest des bisherigen Codes
