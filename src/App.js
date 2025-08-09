@@ -398,9 +398,9 @@ const renderLoginScreen = () => {
     };
 
     return (
-      <div style={{ ...styles.minHeight, ...styles.gradient, padding: '1rem' }}>
-        <div style={styles.container}>
-          <div style={styles.card}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #EBF8FF, #E9D8FD)', padding: '1rem' }}>
+        <div style={{ maxWidth: '28rem', margin: '0 auto', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '2rem' }}>
             <button 
               onClick={() => setCurrentScreen('welcome')}
               style={{ 
@@ -432,7 +432,14 @@ const renderLoginScreen = () => {
             <input
               type="email"
               placeholder="Ihre Email-Adresse"
-              style={styles.input}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #D1D5DB',
+                borderRadius: '0.5rem',
+                marginBottom: '1rem',
+                fontSize: '16px'
+              }}
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
@@ -441,10 +448,14 @@ const renderLoginScreen = () => {
             <button
               onClick={handleLogin}
               style={{
-                ...styles.button,
-                ...(loginEmail && !isLoading
-                  ? {}
-                  : { background: '#D1D5DB', cursor: 'not-allowed' })
+                background: loginEmail && !isLoading ? 'linear-gradient(to right, #3B82F6, #9333EA)' : '#D1D5DB',
+                color: 'white',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                fontWeight: '600',
+                border: 'none',
+                cursor: loginEmail && !isLoading ? 'pointer' : 'not-allowed',
+                width: '100%'
               }}
               disabled={!loginEmail || isLoading}
             >
@@ -1140,8 +1151,6 @@ const renderLoginScreen = () => {
  // Main Render
 return (
   <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-    {console.log('Current Screen:', currentScreen)}
-    {console.log('renderLoginScreen exists?', typeof renderLoginScreen)}
     {currentScreen === 'welcome' && renderWelcomeScreen()} 
     {currentScreen === 'login' && renderLoginScreen()}
     {currentScreen === 'requirements' && renderRequirementsScreen()}
