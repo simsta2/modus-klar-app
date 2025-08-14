@@ -104,7 +104,7 @@ export async function checkAdminAccess(email) {
     const { data, error } = await supabase
       .from('admins')
       .select('*')
-      .eq('email', email)
+      .eq('email', email.toLowerCase()) // <-- toLowerCase() hinzufügen
       .single();
 
     if (error) throw error;
