@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { checkAdminAccess, getAllUsers, getAllVideos, updateVideoStatus, getUserStats } from './api';
+import { supabase } from './supabaseClient';
 
 // Icons
 const Icon = ({ children, className, onClick }) => (
