@@ -142,6 +142,18 @@ const ModusKlarApp = () => {
     setMonthProgress(progress);
   }, [currentDay, todayVideos]);
 
+  // Recording Screen Effect
+useEffect(() => {
+  if (currentScreen === 'recording') {
+    startCamera();
+    return () => {
+      stopCamera();
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }
+}, [currentScreen]);
   // Lade Nutzer-Fortschritt aus Datenbank
   const loadProgress = async (userId) => {
     try {
