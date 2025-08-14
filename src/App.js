@@ -263,28 +263,40 @@ useEffect(() => {
       };
       
       mediaRecorderRef.current.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        
-        // Speichere Video-Eintrag in Datenbank
-        if (userId) {
-          const result = await saveVideoRecord(userId, currentVideoType, currentDay);
-          
-          if (result.success) {
-            setTodayVideos(prev => ({
-              ...prev,
-              [currentVideoType]: 'pending'
-            }));
-            
-            // Simuliere Verifikation nach 5 Sekunden
-            setTimeout(() => {
-              setTodayVideos(prev => ({
-                ...prev,
-                [currentVideoType]: 'verified'
-              }));
-            }, 5000);
-          }
-        }
-      };
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  
+  // Zeige Upload-Status
+  setTodayVideos(prev => ({
+    ...prev,
+    [currentVideoType]: 'uploading'
+  }));
+  
+  // Video hochladen
+  if (userId) {
+    const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
+    
+    if (uploadResult.success) {
+      setTodayVideos(prev => ({
+        ...prev,
+        [currentVideoType]: 'pending'
+      }));
+      
+      // Nach 5 Sekunden auf verified setzen (nur für Demo)
+      setTimeout(() => {
+        setTodayVideos(prev => ({
+          ...prev,
+          [currentVideoType]: 'verified'
+        }));
+      }, 5000);
+    } else {
+      alert('Video-Upload fehlgeschlagen: ' + uploadResult.error);
+      setTodayVideos(prev => ({
+        ...prev,
+        [currentVideoType]: null
+      }));
+    }
+  }
+};
       
       mediaRecorderRef.current.start();
       
