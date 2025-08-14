@@ -218,28 +218,32 @@ export async function getUserStats(userId) {
     return { success: false, error: error.message };
   }
 }
-// Video hochladen zu Supabase Storage
+
 export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
   try {
     // Erstelle eindeutigen Dateinamen
     const fileName = `${userId}/${dayNumber}_${videoType}_${Date.now()}.webm`;
     
-    // Upload zu Supabase Storage
+    // Upload zu Supabase Storage mit explizitem Header
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('videos')
       .upload(fileName, videoBlob, {
         contentType: 'video/webm',
-        cacheControl: '3600'
+        cacheControl: '3600',
+        upsert: true  // <-- Füge das hinzu
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Upload Error Details:', uploadError);
+      throw uploadError;
+    }
 
     // Hole die öffentliche URL
-    const { data: urlData } = supabase.storage
+    const { data: { publicUrl } } = supabase.storage
       .from('videos')
       .getPublicUrl(fileName);
 
-    // Speichere Video-Eintrag in Datenbank mit URL
+    // Speichere Video-Eintrag in Datenbank
     const { data, error } = await supabase
       .from('videos')
       .insert([
@@ -248,18 +252,18 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
           video_type: videoType,
           day_number: dayNumber,
           status: 'pending',
-          video_url: urlData.publicUrl,
+          video_url: publicUrl,
           file_size: videoBlob.size,
-          duration: 30 // oder dynamisch berechnen
+          duration: 30
         }
       ])
       .select()
       .single();
 
-    if (error) throw error;
-    
-    // Update daily progress
-    await updateDailyProgress(userId, dayNumber, videoType, 'pending');
+    if (error) {
+      console.error('Database Error:', error);
+      throw error;
+    }
     
     return { success: true, video: data };
   } catch (error) {
