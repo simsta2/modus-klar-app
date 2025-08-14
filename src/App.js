@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { registerUser, saveVideoRecord, loadUserProgress, loginUser } from './api';
 import AdminDashboard from './AdminDashboard';
+import { registerUser, saveVideoRecord, loadUserProgress, loginUser, uploadVideo } from './api';
 
 // Einfache Icon-Komponenten mit Emojis
 const Icon = ({ children, className, onClick }) => (
