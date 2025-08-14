@@ -36,6 +36,16 @@ const ModusKlarApp = () => {
     return <AdminDashboard />;
   }
   
+  // Prüfe ob Simple Admin
+if (urlParams.get('simple-admin') === 'true') {
+  const SimpleAdmin = React.lazy(() => import('./SimpleAdmin'));
+  return (
+    <React.Suspense fallback={<div>Lade Admin...</div>}>
+      <SimpleAdmin />
+    </React.Suspense>
+  );
+}
+  
   // State Management
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [currentDay, setCurrentDay] = useState(1);
