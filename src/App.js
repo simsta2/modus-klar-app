@@ -1008,15 +1008,6 @@ const renderLoginScreen = () => {
   );
 
   const renderRecordingScreen = () => {
-    useEffect(() => {
-      startCamera();
-      return () => {
-        stopCamera();
-        if (recordingIntervalRef.current) {
-          clearInterval(recordingIntervalRef.current);
-        }
-      };
-    }, []);
     
     return (
       <div style={{ minHeight: '100vh', backgroundColor: 'black', position: 'relative' }}>
