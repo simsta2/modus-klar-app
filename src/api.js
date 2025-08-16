@@ -222,29 +222,29 @@ export async function getUserStats(userId) {
 export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
   try {
     // Erstelle eindeutigen Dateinamen
-    const fileName = `${userId}/${dayNumber}_${videoType}_${Date.now()}.webm`;
+    const fileName = `${userId}_${dayNumber}_${videoType}_${Date.now()}.webm`;
     
-    // Upload zu Supabase Storage mit explizitem Header
+    console.log('Starte Upload:', fileName, 'Größe:', videoBlob.size);
+    
+    // Upload zu Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('videos')
-      .upload(fileName, videoBlob, {
-        contentType: 'video/webm',
-        cacheControl: '3600',
-        upsert: true  // <-- Füge das hinzu
-      });
+      .from('videofiles')  // <-- NEUER BUCKET NAME
+      .upload(fileName, videoBlob);
 
     if (uploadError) {
-      console.error('Upload Error Details:', uploadError);
+      console.error('Storage Upload Error:', uploadError);
       throw uploadError;
     }
 
     // Hole die öffentliche URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('videos')
+    const { data } = supabase.storage
+      .from('videofiles')  // <-- NEUER BUCKET NAME
       .getPublicUrl(fileName);
 
+    console.log('Public URL:', data.publicUrl);
+
     // Speichere Video-Eintrag in Datenbank
-    const { data, error } = await supabase
+    const { data: dbData, error: dbError } = await supabase
       .from('videos')
       .insert([
         {
@@ -252,22 +252,23 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
           video_type: videoType,
           day_number: dayNumber,
           status: 'pending',
-          video_url: publicUrl,
-          file_size: videoBlob.size,
-          duration: 30
+          video_url: data.publicUrl,
+          file_size: videoBlob.size
         }
       ])
       .select()
       .single();
 
-    if (error) {
-      console.error('Database Error:', error);
-      throw error;
+    if (dbError) {
+      console.error('Database Error:', dbError);
+      throw dbError;
     }
     
-    return { success: true, video: data };
+    console.log('Video erfolgreich gespeichert:', dbData);
+    return { success: true, video: dbData };
+    
   } catch (error) {
-    console.error('Video-Upload fehlgeschlagen:', error);
+    console.error('Upload komplett fehlgeschlagen:', error);
     return { success: false, error: error.message };
   }
 }
