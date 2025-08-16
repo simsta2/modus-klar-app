@@ -228,18 +228,13 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
     
     // Upload zu Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('videofiles')  // <-- NEUER BUCKET NAME
+      .from('videos'))  // <-- NEUER BUCKET NAME
       .upload(fileName, videoBlob);
 
     if (uploadError) {
       console.error('Storage Upload Error:', uploadError);
       throw uploadError;
     }
-
-    // Hole die öffentliche URL
-    const { data } = supabase.storage
-      .from('videofiles')  // <-- NEUER BUCKET NAME
-      .getPublicUrl(fileName);
 
     console.log('Public URL:', data.publicUrl);
 
