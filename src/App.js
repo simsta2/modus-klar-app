@@ -272,17 +272,16 @@ useEffect(() => {
         }
       };
       
-      mediaRecorderRef.current.onstop = async () => {
+     mediaRecorderRef.current.onstop = async () => {
   const blob = new Blob(chunks, { type: 'video/webm' });
+  console.log('Aufnahme beendet, Blob-Größe:', blob.size);
   
-  // Zeige Upload-Status
-  setTodayVideos(prev => ({
-    ...prev,
-    [currentVideoType]: 'uploading'
-  }));
-  
-  // Video hochladen
-  if (userId) {
+  if (userId && blob.size > 0) {
+    setTodayVideos(prev => ({
+      ...prev,
+      [currentVideoType]: 'uploading'
+    }));
+    
     const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
     
     if (uploadResult.success) {
@@ -290,21 +289,16 @@ useEffect(() => {
         ...prev,
         [currentVideoType]: 'pending'
       }));
-      
-      // Nach 5 Sekunden auf verified setzen (nur für Demo)
-      setTimeout(() => {
-        setTodayVideos(prev => ({
-          ...prev,
-          [currentVideoType]: 'verified'
-        }));
-      }, 5000);
+      alert('Video erfolgreich hochgeladen!');
     } else {
-      alert('Video-Upload fehlgeschlagen: ' + uploadResult.error);
+      alert('Upload fehlgeschlagen: ' + uploadResult.error);
       setTodayVideos(prev => ({
         ...prev,
         [currentVideoType]: null
       }));
     }
+  } else {
+    alert('Kein Video zum Hochladen oder kein User eingeloggt');
   }
 };
       
