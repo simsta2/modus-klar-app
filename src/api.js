@@ -56,7 +56,7 @@ export async function loginUser(email) {
 export async function saveVideoRecord(userId, videoType, dayNumber) {
   try {
     const { data, error } = await supabase
-      .from('videos')
+      .from('publicvideos')
       .insert([
         {
           user_id: userId,
