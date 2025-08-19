@@ -83,8 +83,15 @@ export async function saveVideoRecord(userId, videoType, dayNumber) {
 // Video hochladen zu Supabase Storage
 export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
   try {
-    // Erstelle eindeutigen Dateinamen
-    const fileName = `${userId}/${dayNumber}_${videoType}_${Date.now()}.webm`;
+    // Erstelle eindeutigen Dateinamen (ohne Slash am Anfang!)
+    const fileName = `${userId}_${dayNumber}_${videoType}_${Date.now()}.webm`;
+    
+    console.log('Upload Start:', {
+      fileName,
+      fileSize: videoBlob.size,
+      fileType: videoBlob.type,
+      userId
+    });
     
     // Upload zu Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -92,7 +99,7 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
       .upload(fileName, videoBlob, {
         contentType: 'video/webm',
         cacheControl: '3600',
-        upsert: true
+        upsert: false // Ändere zu false für neue Uploads
       });
 
     if (uploadError) {
