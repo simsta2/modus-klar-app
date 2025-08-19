@@ -56,7 +56,7 @@ export async function loginUser(email) {
 export async function saveVideoRecord(userId, videoType, dayNumber) {
   try {
     const { data, error } = await supabase
-      .from('publicvideos')
+      .from('videos')
       .insert([
         {
           user_id: userId,
@@ -88,7 +88,7 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
     
     // Upload zu Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('publicvideos')
+      .from('videos')
       .upload(fileName, videoBlob, {
         contentType: 'video/webm',
         cacheControl: '3600',
@@ -102,12 +102,12 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
 
     // Hole die öffentliche URL
     const { data: { publicUrl } } = supabase.storage
-      .from('publicvideos')
+      .from('videos')
       .getPublicUrl(fileName);
 
     // Speichere Video-Eintrag in Datenbank mit URL
     const { data, error } = await supabase
-      .from('publicvideos')
+      .from('videos')
       .insert([
         {
           user_id: userId,
@@ -216,7 +216,7 @@ export async function getAllUsers() {
 export async function getAllVideos() {
   try {
     const { data, error } = await supabase
-      .from('publicvideos')
+      .from('videos')
       .select(`
         *,
         users (
@@ -248,7 +248,7 @@ export async function updateVideoStatus(videoId, status, rejectionReason = null)
     }
 
     const { data, error } = await supabase
-      .from('publicvideos')
+      .from('videos')
       .update(updateData)
       .eq('id', videoId)
       .select()
