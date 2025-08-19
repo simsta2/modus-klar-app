@@ -88,7 +88,7 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
     
     // Upload zu Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('videos')
+      .from('publicvideos')
       .upload(fileName, videoBlob, {
         contentType: 'video/webm',
         cacheControl: '3600',
@@ -102,12 +102,12 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
 
     // Hole die öffentliche URL
     const { data: { publicUrl } } = supabase.storage
-      .from('videos')
+      .from('publicvideos')
       .getPublicUrl(fileName);
 
     // Speichere Video-Eintrag in Datenbank mit URL
     const { data, error } = await supabase
-      .from('videos')
+      .from('publicvideos')
       .insert([
         {
           user_id: userId,
