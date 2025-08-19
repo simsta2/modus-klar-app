@@ -216,7 +216,7 @@ export async function getAllUsers() {
 export async function getAllVideos() {
   try {
     const { data, error } = await supabase
-      .from('videos')
+      .from('publicvideos')
       .select(`
         *,
         users (
@@ -248,7 +248,7 @@ export async function updateVideoStatus(videoId, status, rejectionReason = null)
     }
 
     const { data, error } = await supabase
-      .from('videos')
+      .from('publicvideos')
       .update(updateData)
       .eq('id', videoId)
       .select()
