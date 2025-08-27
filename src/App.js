@@ -114,34 +114,46 @@ if (urlParams.get('simple-admin') === 'true') {
         setUserData(prev => ({ ...prev, name: savedUserName }));
         setCurrentScreen('dashboard');
         
-        // Lade Nutzer-Fortschritt aus Datenbank
-  const loadProgress = async (userId) => {
-    try {
-      const result = await loadUserProgress(userId);
-      if (result.success) {
-        // Verwende die berechnete Streak und aktuellen Tag
-        setCurrentDay(result.currentDay || 1);
-        
-        // Finde den Status für heute
-        const todayProgress = result.progress.find(p => p.day_number === result.currentDay);
-        if (todayProgress) {
-          setTodayVideos({
-            morning: todayProgress.morning_status,
-            evening: todayProgress.evening_status
-          });
-        } else {
-          setTodayVideos({ morning: null, evening: null });
-        }
+       // Lade Nutzer-Fortschritt aus Datenbank
+const loadProgress = async (userId) => {
+  try {
+    const result = await loadUserProgress(userId);
+    if (result.success) {
+      // Verwende die berechnete Streak und aktuellen Tag
+      setCurrentDay(result.currentDay || 1);
+      
+      // Finde den Status für heute
+      const todayProgress = result.progress.find(p => p.day_number === result.currentDay);
+      if (todayProgress) {
+        setTodayVideos({
+          morning: todayProgress.morning_status,
+          evening: todayProgress.evening_status
+        });
+      } else {
+        setTodayVideos({ morning: null, evening: null });
       }
-    } catch (error) {
-      console.error('Fehler beim Laden des Fortschritts:', error);
     }
-  };
+  } catch (error) {
+    console.error('Fehler beim Laden des Fortschritts:', error);
+  }
+};
+
+// Zeitfenster-Check
+useEffect(() => {
+  const checkTimeWindows = () => {
+    const now = new Date();
+    const hour = now.getHours();
     
-    checkTimeWindows();
-    const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
-    return () => clearInterval(interval);
-  }, []);
+    setTimeWindow({
+      morning: hour >= 8 && hour < 12,
+      evening: hour >= 18 && hour < 22
+    });
+  };
+  
+  checkTimeWindows();
+  const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
+  return () => clearInterval(interval);
+}, []);
 
   // Fortschritts-Array generieren
   useEffect(() => {
