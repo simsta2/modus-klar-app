@@ -291,12 +291,16 @@ alert('Video wird hochgeladen...');
     
     const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
     
-    if (uploadResult.success) {
-      setTodayVideos(prev => ({
-        ...prev,
-        [currentVideoType]: 'pending'
-      }));
-      alert('Video erfolgreich hochgeladen!');
+ if (uploadResult.success) {
+  setTodayVideos(prev => ({
+    ...prev,
+    [currentVideoType]: 'pending'
+  }));
+  alert('Video erfolgreich hochgeladen! Es wird nun geprüft.');
+  
+  // Lade den Fortschritt neu
+  await loadProgress(userId);
+}
     } else {
       alert('Upload fehlgeschlagen: ' + uploadResult.error);
       setTodayVideos(prev => ({
