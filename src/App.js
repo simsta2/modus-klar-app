@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { registerUser, saveVideoRecord, loadUserProgress, loginUser, uploadVideo } from './api';
 import AdminDashboard from './AdminDashboard';
+// Ganz oben in App.js, nach den imports
+import { supabase } from './supabaseClient';
+
+// Debug: Mache supabase global verfügbar (nur für Testing!)
+window.supabase = supabase;
 
 // Einfache Icon-Komponenten mit Emojis
 const Icon = ({ children, className, onClick }) => (
