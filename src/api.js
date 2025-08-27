@@ -52,34 +52,6 @@ export async function loginUser(email) {
   }
 }
 
-// Video-Metadaten speichern (ALTE VERSION - wird nicht mehr gebraucht)
-export async function saveVideoRecord(userId, videoType, dayNumber) {
-  try {
-    const { data, error } = await supabase
-      .from('videos')
-      .insert([
-        {
-          user_id: userId,
-          video_type: videoType,
-          day_number: dayNumber,
-          status: 'pending'
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-    
-    // Update daily progress
-    await updateDailyProgress(userId, dayNumber, videoType, 'pending');
-    
-    return { success: true, video: data };
-  } catch (error) {
-    console.error('Video-Speicherung fehlgeschlagen:', error);
-    return { success: false, error: error.message };
-  }
-}
-
 // Video hochladen zu Supabase Storage
 export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
   try {
@@ -103,7 +75,13 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
       });
 
     if (uploadError) {
-      console.error('Upload Error Details:', uploadError);
+      console.error('Storage Error Full Details:', {
+        message: uploadError.message,
+        error: uploadError.error,
+        status: uploadError.status,
+        statusCode: uploadError.statusCode,
+        name: uploadError.name
+      });
       throw uploadError;
     }
 
@@ -111,6 +89,8 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
     const { data: { publicUrl } } = supabase.storage
       .from('videos')
       .getPublicUrl(fileName);
+
+    console.log('Public URL generated:', publicUrl);
 
     // Speichere Video-Eintrag in Datenbank mit URL
     const { data, error } = await supabase
@@ -123,7 +103,8 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
           status: 'pending',
           video_url: publicUrl,
           file_size: videoBlob.size,
-          duration: 30
+          duration: 30,
+          recorded_at: new Date().toISOString()
         }
       ])
       .select()
@@ -131,8 +112,12 @@ export async function uploadVideo(videoBlob, userId, videoType, dayNumber) {
 
     if (error) {
       console.error('Database Error:', error);
+      // Wenn DB-Insert fehlschlägt, lösche die hochgeladene Datei
+      await supabase.storage.from('videos').remove([fileName]);
       throw error;
     }
+    
+    console.log('Video saved to database:', data);
     
     // Update daily progress
     await updateDailyProgress(userId, dayNumber, videoType, 'pending');
@@ -149,18 +134,40 @@ export async function updateDailyProgress(userId, dayNumber, videoType, status) 
   const column = videoType === 'morning' ? 'morning_status' : 'evening_status';
   
   try {
-    const { error } = await supabase
+    // Prüfe ob Eintrag existiert
+    const { data: existing } = await supabase
       .from('daily_progress')
-      .upsert({
-        user_id: userId,
-        day_number: dayNumber,
-        date: new Date().toISOString().split('T')[0],
-        [column]: status
-      }, {
-        onConflict: 'user_id,day_number'
-      });
+      .select('*')
+      .eq('user_id', userId)
+      .eq('day_number', dayNumber)
+      .single();
 
-    if (error) throw error;
+    if (existing) {
+      // Update existierenden Eintrag
+      const { error } = await supabase
+        .from('daily_progress')
+        .update({
+          [column]: status,
+          date: new Date().toISOString().split('T')[0]
+        })
+        .eq('user_id', userId)
+        .eq('day_number', dayNumber);
+        
+      if (error) throw error;
+    } else {
+      // Erstelle neuen Eintrag
+      const { error } = await supabase
+        .from('daily_progress')
+        .insert({
+          user_id: userId,
+          day_number: dayNumber,
+          date: new Date().toISOString().split('T')[0],
+          [column]: status
+        });
+        
+      if (error) throw error;
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Progress-Update fehlgeschlagen:', error);
@@ -168,7 +175,7 @@ export async function updateDailyProgress(userId, dayNumber, videoType, status) 
   }
 }
 
-// Nutzer-Fortschritt laden
+// Nutzer-Fortschritt laden mit korrekter Streak-Berechnung
 export async function loadUserProgress(userId) {
   try {
     const { data, error } = await supabase
@@ -178,7 +185,36 @@ export async function loadUserProgress(userId) {
       .order('day_number', { ascending: true });
 
     if (error) throw error;
-    return { success: true, progress: data || [] };
+    
+    // Berechne die aktuelle Streak
+    let currentStreak = 0;
+    let currentDay = 1;
+    
+    if (data && data.length > 0) {
+      // Finde den höchsten vollständig verifizierten Tag
+      for (const day of data) {
+        if (day.morning_status === 'verified' && day.evening_status === 'verified') {
+          currentStreak = day.day_number;
+        } else if (day.morning_status === 'rejected' || day.evening_status === 'rejected') {
+          // Bei Ablehnung ist Streak = 0
+          currentStreak = 0;
+          break;
+        } else {
+          // Bei pending oder null stoppen wir
+          break;
+        }
+      }
+      
+      // Der aktuelle Tag ist der nächste nach der Streak
+      currentDay = currentStreak + 1;
+    }
+    
+    return { 
+      success: true, 
+      progress: data || [],
+      currentStreak: currentStreak,
+      currentDay: currentDay
+    };
   } catch (error) {
     console.error('Progress-Laden fehlgeschlagen:', error);
     return { success: false, error: error.message };
@@ -241,7 +277,7 @@ export async function getAllVideos() {
   }
 }
 
-// Video-Status aktualisieren
+// Video-Status aktualisieren mit Streak-Reset bei Ablehnung
 export async function updateVideoStatus(videoId, status, rejectionReason = null) {
   try {
     const updateData = {
@@ -265,13 +301,34 @@ export async function updateVideoStatus(videoId, status, rejectionReason = null)
     
     // Update daily progress
     if (data) {
-      await supabase
-        .from('daily_progress')
-        .update({
-          [`${data.video_type}_status`]: status
-        })
-        .eq('user_id', data.user_id)
-        .eq('day_number', data.day_number);
+      // Bei Ablehnung: Reset der gesamten Challenge
+      if (status === 'rejected') {
+        // Lösche alle bisherigen Fortschritte
+        await supabase
+          .from('daily_progress')
+          .delete()
+          .eq('user_id', data.user_id);
+        
+        // Reset User auf Tag 1
+        await supabase
+          .from('users')
+          .update({ 
+            challenge_start_date: new Date().toISOString(),
+            current_day: 1
+          })
+          .eq('id', data.user_id);
+          
+        console.log('Streak reset for user:', data.user_id);
+      } else {
+        // Normales Update für verified/pending
+        await supabase
+          .from('daily_progress')
+          .update({
+            [`${data.video_type}_status`]: status
+          })
+          .eq('user_id', data.user_id)
+          .eq('day_number', data.day_number);
+      }
     }
 
     return { success: true, video: data };
@@ -281,7 +338,7 @@ export async function updateVideoStatus(videoId, status, rejectionReason = null)
   }
 }
 
-// Nutzer-Statistiken
+// Nutzer-Statistiken mit korrekter Streak-Berechnung
 export async function getUserStats(userId) {
   try {
     const { data, error } = await supabase
@@ -293,20 +350,64 @@ export async function getUserStats(userId) {
     if (error) throw error;
     
     const progress = data || [];
-    const completedDays = progress.filter(
-      d => d.morning_status === 'verified' && d.evening_status === 'verified'
-    ).length;
+    let completedDays = 0;
+    let currentStreak = 0;
+    
+    // Berechne vollständige Tage (beide Videos verifiziert)
+    for (const day of progress) {
+      if (day.morning_status === 'verified' && day.evening_status === 'verified') {
+        completedDays++;
+        currentStreak = day.day_number;
+      } else if (day.morning_status === 'rejected' || day.evening_status === 'rejected') {
+        // Reset bei Ablehnung
+        completedDays = 0;
+        currentStreak = 0;
+        break;
+      } else if (day.morning_status === 'verified' || day.evening_status === 'verified') {
+        // Halber Tag wenn nur ein Video verifiziert
+        completedDays += 0.5;
+      }
+    }
     
     return { 
       success: true, 
       stats: {
         totalDays: progress.length,
         completedDays: completedDays,
+        currentStreak: currentStreak,
         successRate: progress.length > 0 ? (completedDays / progress.length * 100).toFixed(1) : 0
       }
     };
   } catch (error) {
     console.error('Fehler beim Laden der Statistiken:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Video-Metadaten speichern (ALTE VERSION - nur für Backward Compatibility)
+export async function saveVideoRecord(userId, videoType, dayNumber) {
+  try {
+    const { data, error } = await supabase
+      .from('videos')
+      .insert([
+        {
+          user_id: userId,
+          video_type: videoType,
+          day_number: dayNumber,
+          status: 'pending'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Update daily progress
+    await updateDailyProgress(userId, dayNumber, videoType, 'pending');
+    
+    return { success: true, video: data };
+  } catch (error) {
+    console.error('Video-Speicherung fehlgeschlagen:', error);
     return { success: false, error: error.message };
   }
 }
