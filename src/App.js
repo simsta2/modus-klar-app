@@ -274,20 +274,26 @@ const loadProgress = async (userId) => {
         }
       };
       
-     mediaRecorderRef.current.onstop = async () => {
+   mediaRecorderRef.current.onstop = async () => {
   const blob = new Blob(chunks, { type: 'video/webm' });
-  console.log('Aufnahme beendet, Blob-Größe:', blob.size);
+  console.log('1. Aufnahme beendet, Blob-Größe:', blob.size);
+  console.log('2. User ID:', userId);
+  console.log('3. Video Type:', currentVideoType);
+  console.log('4. Current Day:', currentDay);
   
   if (userId && blob.size > 0) {
-    setTodayVideos(prev => ({
-      ...prev,
-      [currentVideoType]: 'uploading'
-    }));
+    setTodayVideos(prev => {
+      console.log('5. Setting upload status for:', currentVideoType);
+      return {
+        ...prev,
+        [currentVideoType]: 'uploading'
+      };
+    });
     
-    // Zeige Upload-Status während des Uploads
-    alert('Video wird hochgeladen...');
-    
+    console.log('6. Calling uploadVideo function...');
     const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
+    
+    console.log('7. Upload Result:', uploadResult);
     
     if (uploadResult.success) {
       setTodayVideos(prev => ({
@@ -295,18 +301,17 @@ const loadProgress = async (userId) => {
         [currentVideoType]: 'pending'
       }));
       alert('Video erfolgreich hochgeladen! Es wird nun geprüft.');
-      
-      // Lade den Fortschritt neu
       await loadProgress(userId);
     } else {
-      // DIESE ELSE GEHÖRT ZUM IF (uploadResult.success)
       alert('Upload fehlgeschlagen: ' + uploadResult.error);
+      console.error('8. Upload Error:', uploadResult.error);
       setTodayVideos(prev => ({
         ...prev,
         [currentVideoType]: null
       }));
     }
   } else {
+    console.log('9. Upload blocked - userId:', userId, 'blob.size:', blob.size);
     alert('Kein Video zum Hochladen oder kein User eingeloggt');
   }
 };
