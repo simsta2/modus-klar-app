@@ -141,7 +141,7 @@ if (urlParams.get('simple-admin') === 'true') {
     checkTimeWindows();
     const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
     return () => clearInterval(interval);
-  }, []);
+  },
 
   // Fortschritts-Array generieren
   useEffect(() => {
