@@ -282,26 +282,26 @@ useEffect(() => {
   
   if (userId && blob.size > 0) {
     setTodayVideos(prev => ({
-  ...prev,
-  [currentVideoType]: 'uploading'
-}));
-
-// Zeige Upload-Status während des Uploads
-alert('Video wird hochgeladen...');
+      ...prev,
+      [currentVideoType]: 'uploading'
+    }));
+    
+    // Zeige Upload-Status während des Uploads
+    alert('Video wird hochgeladen...');
     
     const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
     
- if (uploadResult.success) {
-  setTodayVideos(prev => ({
-    ...prev,
-    [currentVideoType]: 'pending'
-  }));
-  alert('Video erfolgreich hochgeladen! Es wird nun geprüft.');
-  
-  // Lade den Fortschritt neu
-  await loadProgress(userId);
-}
+    if (uploadResult.success) {
+      setTodayVideos(prev => ({
+        ...prev,
+        [currentVideoType]: 'pending'
+      }));
+      alert('Video erfolgreich hochgeladen! Es wird nun geprüft.');
+      
+      // Lade den Fortschritt neu
+      await loadProgress(userId);
     } else {
+      // DIESE ELSE GEHÖRT ZUM IF (uploadResult.success)
       alert('Upload fehlgeschlagen: ' + uploadResult.error);
       setTodayVideos(prev => ({
         ...prev,
