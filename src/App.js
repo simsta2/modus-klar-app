@@ -114,25 +114,29 @@ if (urlParams.get('simple-admin') === 'true') {
         setUserData(prev => ({ ...prev, name: savedUserName }));
         setCurrentScreen('dashboard');
         
-        // Lade Fortschritt
-        await loadProgress(savedUserId);
+        // Lade Nutzer-Fortschritt aus Datenbank
+  const loadProgress = async (userId) => {
+    try {
+      const result = await loadUserProgress(userId);
+      if (result.success) {
+        // Verwende die berechnete Streak und aktuellen Tag
+        setCurrentDay(result.currentDay || 1);
+        
+        // Finde den Status für heute
+        const todayProgress = result.progress.find(p => p.day_number === result.currentDay);
+        if (todayProgress) {
+          setTodayVideos({
+            morning: todayProgress.morning_status,
+            evening: todayProgress.evening_status
+          });
+        } else {
+          setTodayVideos({ morning: null, evening: null });
+        }
       }
-    };
-    
-    checkExistingUser();
-  }, []);
-
-  // Zeitfenster-Check
-  useEffect(() => {
-    const checkTimeWindows = () => {
-      const now = new Date();
-      const hour = now.getHours();
-      
-      setTimeWindow({
-        morning: hour >= 8 && hour < 12,
-        evening: hour >= 18 && hour < 22
-      });
-    };
+    } catch (error) {
+      console.error('Fehler beim Laden des Fortschritts:', error);
+    }
+  };
     
     checkTimeWindows();
     const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
