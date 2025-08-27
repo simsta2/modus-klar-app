@@ -282,9 +282,12 @@ useEffect(() => {
   
   if (userId && blob.size > 0) {
     setTodayVideos(prev => ({
-      ...prev,
-      [currentVideoType]: 'uploading'
-    }));
+  ...prev,
+  [currentVideoType]: 'uploading'
+}));
+
+// Zeige Upload-Status während des Uploads
+alert('Video wird hochgeladen...');
     
     const uploadResult = await uploadVideo(blob, userId, currentVideoType, currentDay);
     
