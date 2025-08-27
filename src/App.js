@@ -104,17 +104,68 @@ if (urlParams.get('simple-admin') === 'true') {
   };
 
   // Initial Load - Check für bestehenden User
-  useEffect(() => {
-    const checkExistingUser = async () => {
-      const savedUserId = localStorage.getItem('userId');
-      const savedUserName = localStorage.getItem('userName');
+useEffect(() => {
+  const checkExistingUser = async () => {
+    const savedUserId = localStorage.getItem('userId');
+    const savedUserName = localStorage.getItem('userName');
+    
+    if (savedUserId && savedUserName) {
+      setUserId(savedUserId);
+      setUserData(prev => ({ ...prev, name: savedUserName }));
+      setCurrentScreen('dashboard');
       
-      if (savedUserId && savedUserName) {
-        setUserId(savedUserId);
-        setUserData(prev => ({ ...prev, name: savedUserName }));
-        setCurrentScreen('dashboard');
-        
-       // Lade Nutzer-Fortschritt aus Datenbank
+      // Lade Fortschritt
+      await loadProgress(savedUserId);
+    }
+  };
+  
+  checkExistingUser();
+}, []);
+
+// Zeitfenster-Check
+useEffect(() => {
+  const checkTimeWindows = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    
+    setTimeWindow({
+      morning: hour >= 8 && hour < 12,
+      evening: hour >= 18 && hour < 22
+    });
+  };
+  
+  checkTimeWindows();
+  const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
+  return () => clearInterval(interval);
+}, []);
+
+// Fortschritts-Array generieren
+useEffect(() => {
+  const progress = Array(28).fill(null).map((_, i) => {
+    if (i < currentDay - 1) {
+      return { day: i + 1, morning: 'verified', evening: 'verified' };
+    } else if (i === currentDay - 1) {
+      return { day: currentDay, morning: todayVideos.morning, evening: todayVideos.evening };
+    }
+    return { day: i + 1, morning: null, evening: null };
+  });
+  setMonthProgress(progress);
+}, [currentDay, todayVideos]);
+
+// Recording Screen Effect
+useEffect(() => {
+  if (currentScreen === 'recording') {
+    startCamera();
+    return () => {
+      stopCamera();
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }
+}, [currentScreen]);
+
+// Lade Nutzer-Fortschritt aus Datenbank - NUR EINMAL DEFINIERT!
 const loadProgress = async (userId) => {
   try {
     const result = await loadUserProgress(userId);
@@ -137,71 +188,6 @@ const loadProgress = async (userId) => {
     console.error('Fehler beim Laden des Fortschritts:', error);
   }
 };
-
-// Zeitfenster-Check
-useEffect(() => {
-  const checkTimeWindows = () => {
-    const now = new Date();
-    const hour = now.getHours();
-    
-    setTimeWindow({
-      morning: hour >= 8 && hour < 12,
-      evening: hour >= 18 && hour < 22
-    });
-  };
-  
-  checkTimeWindows();
-  const interval = setInterval(checkTimeWindows, 60000); // Jede Minute prüfen
-  return () => clearInterval(interval);
-}, []);
-
-  // Fortschritts-Array generieren
-  useEffect(() => {
-    const progress = Array(28).fill(null).map((_, i) => {
-      if (i < currentDay - 1) {
-        return { day: i + 1, morning: 'verified', evening: 'verified' };
-      } else if (i === currentDay - 1) {
-        return { day: currentDay, morning: todayVideos.morning, evening: todayVideos.evening };
-      }
-      return { day: i + 1, morning: null, evening: null };
-    });
-    setMonthProgress(progress);
-  }, [currentDay, todayVideos]);
-
-  // Recording Screen Effect
-useEffect(() => {
-  if (currentScreen === 'recording') {
-    startCamera();
-    return () => {
-      stopCamera();
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    };
-  }
-}, [currentScreen]);
-  // Lade Nutzer-Fortschritt aus Datenbank
-  const loadProgress = async (userId) => {
-    try {
-      const result = await loadUserProgress(userId);
-      if (result.success && result.progress) {
-        const completedDays = result.progress.filter(
-          p => p.morning_status === 'verified' && p.evening_status === 'verified'
-        ).length;
-        setCurrentDay(completedDays + 1);
-        
-        const today = result.progress.find(p => p.day_number === completedDays + 1);
-        if (today) {
-          setTodayVideos({
-            morning: today.morning_status,
-            evening: today.evening_status
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden des Fortschritts:', error);
-    }
-  };
 
   // Registrierung Handler
   const handleRegistration = async () => {
