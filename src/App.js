@@ -786,6 +786,7 @@ const renderLoginScreen = () => {
 
   const renderDashboard = () => (
     console.log('DEBUG:', { hour: new Date().getHours(), timeWindow, todayVideos, currentDay });
+ return (
     <div style={{ ...styles.minHeight, ...styles.gradient, paddingBottom: '5rem' }}>
       <div style={{ backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
         <div style={{ ...styles.container, padding: '1rem' }}>
